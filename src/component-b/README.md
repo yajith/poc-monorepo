@@ -8,3 +8,4 @@ Modifying files in this directory triggers `component-b.yml`:
 
 Note: component-b has NO unit-tests capability.
 A PR touching only component-b will see `portainer/unit-tests` auto-skipped by the Worker.
+test change
