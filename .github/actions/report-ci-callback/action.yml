@@ -1,0 +1,90 @@
+name: "Report CI Callback"
+description: >
+  Posts a CI job result to the GitHub Status Check Aggregator Worker.
+  Requests a GitHub Actions OIDC token (audience = Worker URL) and POSTs
+  the result to the Worker's /callback endpoint.
+
+inputs:
+  component:
+    description: "Component name as defined in the Worker config (e.g. component-a)"
+    required: true
+  category:
+    description: "Check category / check name (e.g. portainer/lint)"
+    required: true
+  subjob:
+    description: "Stable subjob identifier as defined in the capability matrix (e.g. run-linters)"
+    required: true
+  status:
+    description: "Job result: 'success' or 'failure'"
+    required: true
+  worker-url:
+    description: "Base URL of the deployed Cloudflare Worker (e.g. https://github-status-check-app.example.workers.dev)"
+    required: true
+  sha:
+    description: "PR head SHA (use github.event.pull_request.head.sha)"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: "POST result to Worker"
+      shell: bash
+      env:
+        COMPONENT: ${{ inputs.component }}
+        CATEGORY: ${{ inputs.category }}
+        SUBJOB: ${{ inputs.subjob }}
+        STATUS: ${{ inputs.status }}
+        WORKER_URL: ${{ inputs.worker-url }}
+        SHA: ${{ inputs.sha }}
+      run: |
+        set -euo pipefail
+
+        echo "Reporting: component=${COMPONENT} category=${CATEGORY} subjob=${SUBJOB} status=${STATUS}"
+
+        # Request an OIDC token with the Worker URL as the audience.
+        # The Worker verifies this token to authenticate the callback.
+        OIDC_TOKEN=$(curl --silent --fail --show-error \
+          -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${WORKER_URL}" \
+          | jq -r '.value')
+
+        if [ -z "${OIDC_TOKEN}" ] || [ "${OIDC_TOKEN}" = "null" ]; then
+          echo "ERROR: Failed to obtain OIDC token" >&2
+          exit 1
+        fi
+
+        PAYLOAD=$(jq -cn \
+          --arg component "${COMPONENT}" \
+          --arg category "${CATEGORY}" \
+          --arg subjob "${SUBJOB}" \
+          --arg status "${STATUS}" \
+          --arg sha "${SHA}" \
+          '{component: $component, category: $category, subjob: $subjob, status: $status, sha: $sha}')
+
+        # Retry up to 3 times with 5-second delays.
+        # The Worker may return 404 if the webhook hasn't been processed yet
+        # (race between /init and /callback on fast jobs).
+        for attempt in 1 2 3; do
+          HTTP_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${OIDC_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "${PAYLOAD}" \
+            "${WORKER_URL}/callback")
+
+          echo "Attempt ${attempt}: HTTP ${HTTP_STATUS}"
+
+          if [ "${HTTP_STATUS}" = "200" ]; then
+            echo "Callback accepted."
+            exit 0
+          elif [ "${HTTP_STATUS}" = "404" ]; then
+            echo "Worker not ready yet, retrying in 5s..."
+            sleep 5
+          else
+            echo "ERROR: Unexpected response ${HTTP_STATUS}" >&2
+            exit 1
+          fi
+        done
+
+        echo "ERROR: Worker did not accept callback after 3 attempts" >&2
+        exit 1

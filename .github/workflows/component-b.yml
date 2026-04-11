@@ -1,0 +1,71 @@
+name: "component-b"
+
+on:
+  pull_request:
+    paths:
+      - "src/component-b/**"
+      - "src/shared/**"
+      - ".github/workflows/component-b.yml"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Deliberately has NO run-tests job.
+# A PR touching only src/component-b/ or src/shared/ will have portainer/unit-tests
+# auto-skipped by the Worker (component-b has no unit-tests capability).
+
+permissions:
+  contents: read
+
+jobs:
+  run-linters:
+    name: "run-linters"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Simulate linting"
+        run: |
+          echo "Linting component-b..."
+          # Uncomment to simulate a failure:
+          # exit 1
+
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "component-b"
+          category: "portainer/lint"
+          subjob: "run-linters"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  build-manifests:
+    name: "build-manifests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Simulate build"
+        run: |
+          echo "Building component-b..."
+          # Uncomment to simulate a failure:
+          # exit 1
+
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "component-b"
+          category: "portainer/build"
+          subjob: "build-manifests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
