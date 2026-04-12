@@ -1,0 +1,95 @@
+name: "agent"
+
+on:
+  pull_request:
+    paths:
+      - "src/agent/**"
+      - "src/shared-pkg/**"
+      - "src/shared-api/**"
+      - ".github/workflows/agent.yml"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  run-linters:
+    name: "run-linters"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate linting"
+        run: |
+          if [ -f "test/fail-agent-run-linters" ]; then
+            echo "Failure injection: agent/run-linters"; exit 1
+          fi
+          sleep 8
+          echo "agent run-linters complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "agent"
+          category: "portainer/lint"
+          subjob: "run-linters"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  run-agent-tests:
+    name: "run-agent-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate unit tests"
+        run: |
+          if [ -f "test/fail-agent-run-agent-tests" ]; then
+            echo "Failure injection: agent/run-agent-tests"; exit 1
+          fi
+          sleep 20
+          echo "agent run-agent-tests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "agent"
+          category: "portainer/unit-tests"
+          subjob: "run-agent-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  build-manifests:
+    name: "build-manifests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate build"
+        run: |
+          if [ -f "test/fail-agent-build-manifests" ]; then
+            echo "Failure injection: agent/build-manifests"; exit 1
+          fi
+          sleep 12
+          echo "agent build-manifests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "agent"
+          category: "portainer/build"
+          subjob: "build-manifests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}

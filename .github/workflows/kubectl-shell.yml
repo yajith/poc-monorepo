@@ -1,0 +1,41 @@
+name: "kubectl"
+
+on:
+  pull_request:
+    paths:
+      - "src/kubectl/**"
+      - ".github/workflows/kubectl-shell.yml"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+# kubectl has build only — lint, unit-tests, integration-tests, system-tests all auto-skipped.
+
+jobs:
+  build-manifests:
+    name: "build-manifests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate build"
+        run: |
+          if [ -f "test/fail-kubectl-build-manifests" ]; then
+            echo "Failure injection: kubectl/build-manifests"; exit 1
+          fi
+          sleep 4
+          echo "kubectl build-manifests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "kubectl"
+          category: "portainer/build"
+          subjob: "build-manifests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}

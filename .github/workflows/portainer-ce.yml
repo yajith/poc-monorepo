@@ -1,0 +1,190 @@
+name: "ce"
+
+on:
+  pull_request:
+    paths:
+      - "src/ce/**"
+      - "src/shared-api/**"
+      - "src/shared-pkg/**"
+      - "system-tests/**"
+      - ".github/workflows/portainer-ce.yml"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+# ce has 2 jobs per lint and unit-tests (client + server), like the real portainer-ce.
+# system-tests job reports to BOTH system-tests/platform AND system-tests/edge.
+
+jobs:
+  client-linters:
+    name: "client-linters"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate client linting"
+        run: |
+          if [ -f "test/fail-ce-client-linters" ]; then
+            echo "Failure injection: ce/client-linters"; exit 1
+          fi
+          sleep 10
+          echo "ce client-linters complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ce"
+          category: "portainer/lint"
+          subjob: "client-linters"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  server-linters:
+    name: "server-linters"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate server linting"
+        run: |
+          if [ -f "test/fail-ce-server-linters" ]; then
+            echo "Failure injection: ce/server-linters"; exit 1
+          fi
+          sleep 15
+          echo "ce server-linters complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ce"
+          category: "portainer/lint"
+          subjob: "server-linters"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  client-tests:
+    name: "client-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate client unit tests"
+        run: |
+          if [ -f "test/fail-ce-client-tests" ]; then
+            echo "Failure injection: ce/client-tests"; exit 1
+          fi
+          sleep 30
+          echo "ce client-tests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ce"
+          category: "portainer/unit-tests"
+          subjob: "client-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  server-tests:
+    name: "server-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate server unit tests"
+        run: |
+          if [ -f "test/fail-ce-server-tests" ]; then
+            echo "Failure injection: ce/server-tests"; exit 1
+          fi
+          sleep 40
+          echo "ce server-tests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ce"
+          category: "portainer/unit-tests"
+          subjob: "server-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  build-manifests:
+    name: "build-manifests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate build"
+        run: |
+          if [ -f "test/fail-ce-build-manifests" ]; then
+            echo "Failure injection: ce/build-manifests"; exit 1
+          fi
+          sleep 20
+          echo "ce build-manifests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ce"
+          category: "portainer/build"
+          subjob: "build-manifests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  system-tests:
+    name: "system-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate system tests"
+        run: |
+          if [ -f "test/fail-ce-system-tests" ]; then
+            echo "Failure injection: ce/system-tests"; exit 1
+          fi
+          sleep 60
+          echo "ce system-tests complete"
+      - name: "Report platform result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ce"
+          category: "portainer/system-tests/platform"
+          subjob: "system-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+      - name: "Report edge result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ce"
+          category: "portainer/system-tests/edge"
+          subjob: "system-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}

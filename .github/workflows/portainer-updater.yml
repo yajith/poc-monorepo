@@ -1,14 +1,12 @@
-name: "component-a"
+name: "updater"
 
 on:
   pull_request:
     paths:
-      - "src/component-a/**"
-      - "src/shared/**"
-      - ".github/workflows/component-a.yml"
+      - "src/updater/**"
+      - ".github/workflows/portainer-updater.yml"
     types: [opened, synchronize, reopened, ready_for_review]
 
-# id-token: write is required on every job to request OIDC tokens for the callback
 permissions:
   contents: read
 
@@ -22,18 +20,18 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
       - name: "Simulate linting"
         run: |
-          echo "Linting component-a..."
-          # Uncomment to simulate a failure:
-          # exit 1
-
+          if [ -f "test/fail-updater-run-linters" ]; then
+            echo "Failure injection: updater/run-linters"; exit 1
+          fi
+          sleep 5
+          echo "updater run-linters complete"
       - name: "Report result"
         if: always()
         uses: ./.github/actions/report-ci-callback
         with:
-          component: "component-a"
+          component: "updater"
           category: "portainer/lint"
           subjob: "run-linters"
           status: ${{ job.status == 'success' && 'success' || 'failure' }}
@@ -49,18 +47,18 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
       - name: "Simulate unit tests"
         run: |
-          echo "Running unit tests for component-a..."
-          # Uncomment to simulate a failure:
-          # exit 1
-
+          if [ -f "test/fail-updater-run-tests" ]; then
+            echo "Failure injection: updater/run-tests"; exit 1
+          fi
+          sleep 10
+          echo "updater run-tests complete"
       - name: "Report result"
         if: always()
         uses: ./.github/actions/report-ci-callback
         with:
-          component: "component-a"
+          component: "updater"
           category: "portainer/unit-tests"
           subjob: "run-tests"
           status: ${{ job.status == 'success' && 'success' || 'failure' }}
@@ -76,18 +74,18 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
       - name: "Simulate build"
         run: |
-          echo "Building component-a..."
-          # Uncomment to simulate a failure:
-          # exit 1
-
+          if [ -f "test/fail-updater-build-manifests" ]; then
+            echo "Failure injection: updater/build-manifests"; exit 1
+          fi
+          sleep 6
+          echo "updater build-manifests complete"
       - name: "Report result"
         if: always()
         uses: ./.github/actions/report-ci-callback
         with:
-          component: "component-a"
+          component: "updater"
           category: "portainer/build"
           subjob: "build-manifests"
           status: ${{ job.status == 'success' && 'success' || 'failure' }}

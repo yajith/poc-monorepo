@@ -1,19 +1,19 @@
-name: "component-b"
+name: "hollow-agent"
 
 on:
   pull_request:
     paths:
-      - "src/component-b/**"
-      - "src/shared/**"
-      - ".github/workflows/component-b.yml"
+      - "src/hollow-agent/**"
+      - "src/agent/**"
+      - "src/shared-pkg/**"
+      - "src/shared-api/**"
+      - ".github/workflows/hollow-agent.yml"
     types: [opened, synchronize, reopened, ready_for_review]
-
-# Deliberately has NO run-tests job.
-# A PR touching only src/component-b/ or src/shared/ will have portainer/unit-tests
-# auto-skipped by the Worker (component-b has no unit-tests capability).
 
 permissions:
   contents: read
+
+# hollow-agent has lint + build only — no unit-tests, integration-tests, or system-tests.
 
 jobs:
   run-linters:
@@ -25,18 +25,18 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
       - name: "Simulate linting"
         run: |
-          echo "Linting component-b..."
-          # Uncomment to simulate a failure:
-          # exit 1
-
+          if [ -f "test/fail-hollow-agent-run-linters" ]; then
+            echo "Failure injection: hollow-agent/run-linters"; exit 1
+          fi
+          sleep 6
+          echo "hollow-agent run-linters complete"
       - name: "Report result"
         if: always()
         uses: ./.github/actions/report-ci-callback
         with:
-          component: "component-b"
+          component: "hollow-agent"
           category: "portainer/lint"
           subjob: "run-linters"
           status: ${{ job.status == 'success' && 'success' || 'failure' }}
@@ -52,18 +52,18 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-
       - name: "Simulate build"
         run: |
-          echo "Building component-b..."
-          # Uncomment to simulate a failure:
-          # exit 1
-
+          if [ -f "test/fail-hollow-agent-build-manifests" ]; then
+            echo "Failure injection: hollow-agent/build-manifests"; exit 1
+          fi
+          sleep 8
+          echo "hollow-agent build-manifests complete"
       - name: "Report result"
         if: always()
         uses: ./.github/actions/report-ci-callback
         with:
-          component: "component-b"
+          component: "hollow-agent"
           category: "portainer/build"
           subjob: "build-manifests"
           status: ${{ job.status == 'success' && 'success' || 'failure' }}

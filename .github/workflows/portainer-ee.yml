@@ -1,0 +1,219 @@
+name: "ee"
+
+on:
+  pull_request:
+    paths:
+      - "src/ee/**"
+      - "src/ce/**"
+      - "src/shared-api/**"
+      - "src/shared-pkg/**"
+      - "system-tests/**"
+      - ".github/workflows/portainer-ee.yml"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+# ee has the same structure as ce plus an integration-tests job.
+# system-tests job reports to BOTH system-tests/platform AND system-tests/edge.
+# ee sleeps longer than ce to simulate real-world EE being slower.
+
+jobs:
+  client-linters:
+    name: "client-linters"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate client linting"
+        run: |
+          if [ -f "test/fail-ee-client-linters" ]; then
+            echo "Failure injection: ee/client-linters"; exit 1
+          fi
+          sleep 12
+          echo "ee client-linters complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ee"
+          category: "portainer/lint"
+          subjob: "client-linters"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  server-linters:
+    name: "server-linters"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate server linting"
+        run: |
+          if [ -f "test/fail-ee-server-linters" ]; then
+            echo "Failure injection: ee/server-linters"; exit 1
+          fi
+          sleep 18
+          echo "ee server-linters complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ee"
+          category: "portainer/lint"
+          subjob: "server-linters"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  client-tests:
+    name: "client-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate client unit tests"
+        run: |
+          if [ -f "test/fail-ee-client-tests" ]; then
+            echo "Failure injection: ee/client-tests"; exit 1
+          fi
+          sleep 35
+          echo "ee client-tests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ee"
+          category: "portainer/unit-tests"
+          subjob: "client-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  server-tests:
+    name: "server-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate server unit tests"
+        run: |
+          if [ -f "test/fail-ee-server-tests" ]; then
+            echo "Failure injection: ee/server-tests"; exit 1
+          fi
+          sleep 50
+          echo "ee server-tests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ee"
+          category: "portainer/unit-tests"
+          subjob: "server-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  run-integration-tests:
+    name: "run-integration-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate API integration tests"
+        run: |
+          if [ -f "test/fail-ee-run-integration-tests" ]; then
+            echo "Failure injection: ee/run-integration-tests"; exit 1
+          fi
+          sleep 45
+          echo "ee run-integration-tests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ee"
+          category: "portainer/integration-tests"
+          subjob: "run-integration-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  build-manifests:
+    name: "build-manifests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate build"
+        run: |
+          if [ -f "test/fail-ee-build-manifests" ]; then
+            echo "Failure injection: ee/build-manifests"; exit 1
+          fi
+          sleep 25
+          echo "ee build-manifests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ee"
+          category: "portainer/build"
+          subjob: "build-manifests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  system-tests:
+    name: "system-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate system tests"
+        run: |
+          if [ -f "test/fail-ee-system-tests" ]; then
+            echo "Failure injection: ee/system-tests"; exit 1
+          fi
+          sleep 90
+          echo "ee system-tests complete"
+      - name: "Report platform result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ee"
+          category: "portainer/system-tests/platform"
+          subjob: "system-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+      - name: "Report edge result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "ee"
+          category: "portainer/system-tests/edge"
+          subjob: "system-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}

@@ -1,0 +1,70 @@
+name: "system-tests"
+
+on:
+  pull_request:
+    paths:
+      - "system-tests/**"
+      - ".github/workflows/system-tests.yml"
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+# system-tests component: only platform + edge capabilities.
+# Note: ce and ee workflows also fire on system-tests/** changes and contribute their
+# own system-tests callbacks. This workflow is the dedicated system-tests runner.
+
+jobs:
+  run-platform-tests:
+    name: "run-platform-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate platform system tests"
+        run: |
+          if [ -f "test/fail-system-tests-run-platform-tests" ]; then
+            echo "Failure injection: system-tests/run-platform-tests"; exit 1
+          fi
+          sleep 120
+          echo "system-tests run-platform-tests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "system-tests"
+          category: "portainer/system-tests/platform"
+          subjob: "run-platform-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
+
+  run-edge-tests:
+    name: "run-edge-tests"
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Simulate edge system tests"
+        run: |
+          if [ -f "test/fail-system-tests-run-edge-tests" ]; then
+            echo "Failure injection: system-tests/run-edge-tests"; exit 1
+          fi
+          sleep 120
+          echo "system-tests run-edge-tests complete"
+      - name: "Report result"
+        if: always()
+        uses: ./.github/actions/report-ci-callback
+        with:
+          component: "system-tests"
+          category: "portainer/system-tests/edge"
+          subjob: "run-edge-tests"
+          status: ${{ job.status == 'success' && 'success' || 'failure' }}
+          worker-url: ${{ vars.WORKER_URL }}
+          sha: ${{ github.event.pull_request.head.sha }}
